@@ -2,7 +2,7 @@ name: ci-after-merge-to-main
 
 on:
   push:
-    branches: [ main ]
+    branches: [ develop ]
 
 jobs:
   detect-and-publish:
@@ -82,7 +82,7 @@ jobs:
         run: |
           helm package charts/${{ steps.detect-chart.outputs.chart_dir }}
 
-      - name: Log in to GitHub Container Registry
+      - name: Log in to GitHub Container Registry for development environment 
         if: steps.detect-chart.outputs.chart_changed == 'true'
         uses: docker/login-action@v2
         env: 
@@ -92,12 +92,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish Helm chart to GHCR
+      - name: Publish Helm chart to GHCR for development environment
         if: steps.detect-chart.outputs.chart_changed == 'true'
         run: |
-          helm push ${{ steps.detect-chart.outputs.chart_name }}-${{ steps.detect-chart.outputs.new_version }}.tgz oci://ghcr.io/${{ github.repository_owner }}
+          #helm push ${{ steps.detect-chart.outputs.chart_name }}-${{ steps.detect-chart.outputs.new_version }}.tgz oci://ghcr.io/${{ github.repository_owner }}
+          echo "simulating helm push to development environment"
 
-      - name: Tag main branch
+      - name: Tag develop branch
         if: steps.detect-chart.outputs.chart_changed == 'true'
         run: |
           git tag ${{ steps.detect-chart.outputs.chart_name }}-${{ steps.detect-chart.outputs.new_version }}
