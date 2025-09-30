@@ -1,4 +1,4 @@
-name: ci-after-merge-to-main
+name: ci-after-merge-to-develop
 
 on:
   push:
