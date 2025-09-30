@@ -1,7 +1,7 @@
 apiVersion: v2
 name: aimlinfra-kuberay-operator  # Name of the chart (without team prefix)
 description: A Helm chart for KubeRay Operator
-version: 0.1.7-dev  # SemVer: MAJOR.MINOR.PATCH
+version: 0.1.7  # SemVer: MAJOR.MINOR.PATCH
 appVersion: "1.0.0"  # Version of the app this chart deploys
 home: https://github.com/sadhal/ocp-infra-kaas-customers-helm
 sources:
