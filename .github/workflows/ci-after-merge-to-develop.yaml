@@ -97,9 +97,3 @@ jobs:
         run: |
           #helm push ${{ steps.detect-chart.outputs.chart_name }}-${{ steps.detect-chart.outputs.new_version }}.tgz oci://ghcr.io/${{ github.repository_owner }}
           echo "simulating helm push to development environment"
-
-      - name: Tag develop branch
-        if: steps.detect-chart.outputs.chart_changed == 'true'
-        run: |
-          git tag ${{ steps.detect-chart.outputs.chart_name }}-${{ steps.detect-chart.outputs.new_version }}
-          git push origin ${{ steps.detect-chart.outputs.chart_name }}-${{ steps.detect-chart.outputs.new_version }}
