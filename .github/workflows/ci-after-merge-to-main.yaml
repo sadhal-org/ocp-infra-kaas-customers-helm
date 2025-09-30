@@ -1,0 +1,85 @@
+name: ci-after-merge-to-main
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  detect-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+
+      - name: Detect changed chart
+        id: detect-chart
+        run: |
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          echo "Changed files: $CHANGED_FILES"
+
+          # Find the chart directory (assuming only one chart is changed)
+          CHART_DIR=$(echo "$CHANGED_FILES" | grep -E '^charts/[^/]+/' | head -n 1 | cut -d'/' -f2)
+          if [ -z "$CHART_DIR" ]; then
+            echo "No chart directory found in changed files."
+            exit 0
+          fi
+
+          # Extract chart name and team prefix
+          CHART_NAME=$(basename "$CHART_DIR")
+          TEAM_PREFIX=$(echo "$CHART_DIR" | cut -d'-' -f1)
+
+          # Get new version from Chart.yaml
+          NEW_VERSION=$(yq eval '.version' "charts/$CHART_DIR/Chart.yaml")
+
+          # Get previous version from git history
+          PREV_VERSION=$(git show HEAD~1:charts/$CHART_DIR/Chart.yaml | yq eval '.version' -)
+
+          # Validate version bump
+          if [ "$NEW_VERSION" = "$PREV_VERSION" ]; then
+            echo "Version not bumped in Chart.yaml!"
+            exit 1
+          fi
+
+          # Validate SemVer
+          if ! echo "$NEW_VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'; then
+            echo "Version does not follow SemVer!"
+            exit 1
+          fi
+
+          echo "chart_dir=$CHART_DIR" >> $GITHUB_OUTPUT
+          echo "chart_name=$CHART_NAME" >> $GITHUB_OUTPUT
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Lint Helm chart
+        run: |
+          helm lint charts/${{ steps.detect-chart.outputs.chart_dir }}
+
+      - name: Template test Helm chart
+        run: |
+          helm template charts/${{ steps.detect-chart.outputs.chart_dir }}
+
+      - name: Package Helm chart
+        run: |
+          helm package charts/${{ steps.detect-chart.outputs.chart_dir }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Helm chart to GHCR
+        run: |
+          helm push ${{ steps.detect-chart.outputs.chart_name }}-${{ steps.detect-chart.outputs.new_version }}.tgz oci://ghcr.io/${{ github.repository_owner }}
+
+      - name: Tag main branch
+        run: |
+          git tag ${{ steps.detect-chart.outputs.chart_name }}-${{ steps.detect-chart.outputs.new_version }}
+          git push origin ${{ steps.detect-chart.outputs.chart_name }}-${{ steps.detect-chart.outputs.new_version }}
