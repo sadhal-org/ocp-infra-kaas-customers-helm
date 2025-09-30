@@ -7,6 +7,8 @@ on:
 jobs:
   detect-and-publish:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -71,11 +73,11 @@ jobs:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         env: 
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ GH_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish Helm chart to GHCR
         run: |
